@@ -1,0 +1,7 @@
+/notebooks
+/models
+/data
+/.idea
+__pycache__/
+/.DS_Store
+/.pytest_cache
