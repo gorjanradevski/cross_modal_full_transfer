@@ -70,14 +70,15 @@ def train(
             # update weights
             optimizer.step()
 
-        for images, sentences in tqdm(val_loader):
-            images, sentences = images.to(device), sentences.to(device)
-            embedded_images, embedded_sentences = model(images, sentences)
+        with torch.no_grad():
+            for images, sentences in tqdm(val_loader):
+                images, sentences = images.to(device), sentences.to(device)
+                embedded_images, embedded_sentences = model(images, sentences)
 
-            evaluator.update_embeddings(
-                embedded_images.cpu().numpy().copy(),
-                embedded_sentences.cpu().numpy().copy(),
-            )
+                evaluator.update_embeddings(
+                    embedded_images.cpu().numpy().copy(),
+                    embedded_sentences.cpu().numpy().copy(),
+                )
 
         if evaluator.is_best_recall_at_k():
             evaluator.update_best_recall_at_k()
