@@ -73,7 +73,11 @@ def train(
         for images, sentences in tqdm(val_loader):
             images, sentences = images.to(device), sentences.to(device)
             embedded_images, embedded_sentences = model(images, sentences)
-            evaluator.update_embeddings(embedded_images, embedded_sentences)
+
+            evaluator.update_embeddings(
+                embedded_images.cpu().numpy().copy(),
+                embedded_sentences.cpu().numpy().copy(),
+            )
 
         if evaluator.is_best_recall_at_k():
             evaluator.update_best_recall_at_k()
