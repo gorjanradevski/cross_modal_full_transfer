@@ -44,10 +44,11 @@ def train(
         shuffle=True,
         num_workers=4,
         collate_fn=collate_pad_batch,
+        pin_memory=True
     )
     dataset_val = FlickrDatasetVal(images_path, sentences_path, val_imgs_file_path)
     val_loader = DataLoader(
-        dataset_val, batch_size=batch_size, num_workers=4, collate_fn=collate_pad_batch
+        dataset_val, batch_size=batch_size, num_workers=4, collate_fn=collate_pad_batch, pin_memory=True
     )
     model = nn.DataParallel(
         ImageTextMatchingModel(joint_space, finetune_image_encoder)
@@ -59,6 +60,7 @@ def train(
 
     for epoch in range(epochs):
         print(f"Starting epoch {epoch+1}...")
+        evaluator.reset_all_vars()
         for images, sentences in tqdm(train_loader):
             images, sentences = images.to(device), sentences.to(device)
             optimizer.zero_grad()
