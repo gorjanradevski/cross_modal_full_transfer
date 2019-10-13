@@ -64,9 +64,7 @@ class Projector(nn.Module):
         self.l2_normalize = L2Normalize()
 
     def forward(self, embeddings: torch.Tensor):
-        projected_embeddings = self.fc2(
-            self.bn(F.relu(self.fc1(embeddings)))
-        )
+        projected_embeddings = self.fc2(self.bn(F.relu(self.fc1(embeddings))))
 
         return self.l2_normalize(projected_embeddings)
 

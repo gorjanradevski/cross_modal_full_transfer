@@ -77,35 +77,29 @@ def train(
         model.train(True)
         print(f"Starting epoch {epoch+1}...")
         evaluator.reset_all_vars()
-        with tqdm(total=len(train_loader)) as pbar:
-            for images, sentences in train_loader:
-                images, sentences = images.to(device), sentences.to(device)
-                optimizer.zero_grad()
-                # forward
-                embedded_images, embedded_sentences = model(images, sentences)
-                loss = criterion(embedded_images, embedded_sentences)
-                # backward
-                loss.backward()
-                # clip the gradients
-                torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
-                # update weights
-                optimizer.step()
-                # Update progress bar
-                pbar.update(len(sentences))
-                pbar.set_postfix({"Batch loss": loss.item()})
+        for images, sentences in tqdm(train_loader):
+            images, sentences = images.to(device), sentences.to(device)
+            optimizer.zero_grad()
+            # forward
+            embedded_images, embedded_sentences = model(images, sentences)
+            loss = criterion(embedded_images, embedded_sentences)
+            # backward
+            loss.backward()
+            # clip the gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
+            # update weights
+            optimizer.step()
 
         # Set model in evaluation mode
         model.train(False)
         with torch.no_grad():
-            with tqdm(total=len(train_loader)) as pbar:
-                for images, sentences in val_loader:
-                    images, sentences = images.to(device), sentences.to(device)
-                    embedded_images, embedded_sentences = model(images, sentences)
-                    evaluator.update_embeddings(
-                        embedded_images.cpu().numpy().copy(),
-                        embedded_sentences.cpu().numpy().copy(),
-                    )
-                    pbar.update(len(sentences))
+            for images, sentences in tqdm(val_loader):
+                images, sentences = images.to(device), sentences.to(device)
+                embedded_images, embedded_sentences = model(images, sentences)
+                evaluator.update_embeddings(
+                    embedded_images.cpu().numpy().copy(),
+                    embedded_sentences.cpu().numpy().copy(),
+                )
 
         if evaluator.is_best_recall_at_k():
             evaluator.update_best_recall_at_k()
