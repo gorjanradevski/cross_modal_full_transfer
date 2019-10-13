@@ -66,7 +66,7 @@ def train(
 
     for epoch in range(epochs):
         # Set model in train mode
-        model.train()
+        model.set_train()
         print(f"Starting epoch {epoch+1}...")
         evaluator.reset_all_vars()
         for images, sentences in tqdm(train_loader):
@@ -80,7 +80,7 @@ def train(
             # update weights
             optimizer.step()
 
-        model.eval()
+        model.set_eval()
         with torch.no_grad():
             for images, sentences in tqdm(val_loader):
                 images, sentences = images.to(device), sentences.to(device)
