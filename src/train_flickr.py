@@ -64,9 +64,12 @@ def train(
     criterion = TripletLoss(margin, batch_hard)
     # noinspection PyUnresolvedReferences
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, finetune_after, gamma=0.1)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, finetune_after, gamma=0.1)
     evaluator = Evaluator(len(dataset_val), joint_space)
     for epoch in range(epochs):
+        print(f"Starting epoch {epoch + 1}...")
+        evaluator.reset_all_vars()
+
         # Check whether you should fine-tune
         if epoch > finetune_after:
             if finetune_image_encoder:
@@ -76,8 +79,6 @@ def train(
 
         # Set model in train mode
         model.train(True)
-        print(f"Starting epoch {epoch+1}...")
-        evaluator.reset_all_vars()
         for images, sentences in tqdm(train_loader):
             images, sentences = images.to(device), sentences.to(device)
             # scheduler.zero_grad()
@@ -90,8 +91,9 @@ def train(
             # clip the gradients
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
             # update weights
-            # scheduler.step()
             optimizer.step()
+            # decay the learning rate
+            scheduler.step()
 
         # Set model in evaluation mode
         model.train(False)
