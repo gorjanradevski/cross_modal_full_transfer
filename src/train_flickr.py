@@ -33,6 +33,7 @@ def train(
     batch_hard: bool,
     finetune_image_encoder: bool,
     finetune_sentence_encoder: bool,
+    finetune_after: int,
 ):
     # Check for CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -64,36 +65,47 @@ def train(
     # noinspection PyUnresolvedReferences
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     evaluator = Evaluator(len(dataset_val), joint_space)
-
     for epoch in range(epochs):
+        # Check whether you should fine-tune
+        if epoch > finetune_after:
+            if finetune_image_encoder:
+                model.module.unfreeze_image_encoder()
+            if finetune_sentence_encoder:
+                model.module.unfreeze_sentence_encoder()
+
         # Set model in train mode
         model.train(True)
         print(f"Starting epoch {epoch+1}...")
         evaluator.reset_all_vars()
-        for images, sentences in tqdm(train_loader):
-            images, sentences = images.to(device), sentences.to(device)
-            optimizer.zero_grad()
-            # forward
-            embedded_images, embedded_sentences = model(images, sentences)
-            loss = criterion(embedded_images, embedded_sentences)
-            # backward
-            loss.backward()
-            # clip the gradients
-            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
-            # update weights
-            optimizer.step()
+        with tqdm(total=len(train_loader)) as pbar:
+            for images, sentences in train_loader:
+                images, sentences = images.to(device), sentences.to(device)
+                optimizer.zero_grad()
+                # forward
+                embedded_images, embedded_sentences = model(images, sentences)
+                loss = criterion(embedded_images, embedded_sentences)
+                # backward
+                loss.backward()
+                # clip the gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
+                # update weights
+                optimizer.step()
+                # Update progress bar
+                pbar.update(len(sentences))
+                pbar.set_postfix({"Batch loss": loss.item()})
 
         # Set model in evaluation mode
         model.train(False)
         with torch.no_grad():
-            for images, sentences in tqdm(val_loader):
-                images, sentences = images.to(device), sentences.to(device)
-                embedded_images, embedded_sentences = model(images, sentences)
-
-                evaluator.update_embeddings(
-                    embedded_images.cpu().numpy().copy(),
-                    embedded_sentences.cpu().numpy().copy(),
-                )
+            with tqdm(total=len(train_loader)) as pbar:
+                for images, sentences in val_loader:
+                    images, sentences = images.to(device), sentences.to(device)
+                    embedded_images, embedded_sentences = model(images, sentences)
+                    evaluator.update_embeddings(
+                        embedded_images.cpu().numpy().copy(),
+                        embedded_sentences.cpu().numpy().copy(),
+                    )
+                    pbar.update(len(sentences))
 
         if evaluator.is_best_recall_at_k():
             evaluator.update_best_recall_at_k()
@@ -128,6 +140,7 @@ def main():
         args.batch_hard,
         args.finetune_image_encoder,
         args.finetune_sentence_encoder,
+        args.finetune_after,
     )
 
 
@@ -207,6 +220,9 @@ def parse_args():
         "--finetune_sentence_encoder",
         action="store_true",
         help="Whether to finetune the sentence encoder.",
+    )
+    parser.add_argument(
+        "--finetune_after", default=5, type=int, help="When to start finetuning."
     )
 
     return parser.parse_args()

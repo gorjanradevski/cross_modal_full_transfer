@@ -3,6 +3,7 @@ from torch import nn
 from torch.autograd import Variable
 from torchvision.models import resnet152
 from transformers import BertModel
+import torch.nn.functional as F
 
 
 class L2Normalize(nn.Module):
@@ -11,45 +12,63 @@ class L2Normalize(nn.Module):
 
     def forward(self, x):
         norm = torch.pow(x, 2).sum(dim=1, keepdim=True).sqrt()
-        X = torch.div(x, norm)
+        normalized = torch.div(x, norm)
 
-        return X
+        return normalized
 
 
 class ImageEncoder(nn.Module):
-    def __init__(self, joint_space: int, finetune: bool):
+    def __init__(self):
         super(ImageEncoder, self).__init__()
         self.resnet = torch.nn.Sequential(
             *(list(resnet152(pretrained=True).children())[:-1])
         )
-        self.fc = nn.Linear(2048, joint_space)
-        self.l2_normalize = L2Normalize()
 
         for param in self.resnet.parameters():
-            param.requires_grad = finetune
+            param.requires_grad = False
 
     def forward(self, images: torch.Tensor):
         embedded_images = torch.flatten(self.resnet(images), start_dim=1)
-        embedded_images = self.fc(embedded_images)
 
-        return self.l2_normalize(embedded_images)
+        return embedded_images
 
 
 class SentenceEncoder(nn.Module):
-    def __init__(self, joint_space: int, finetune: bool):
+    def __init__(self):
         super(SentenceEncoder, self).__init__()
         self.bert = BertModel.from_pretrained("bert-base-uncased")
-        self.fc = nn.Linear(768, joint_space)
-        self.l2_normalize = L2Normalize()
+        #  https://arxiv.org/abs/1801.06146
 
         for param in self.bert.parameters():
-            param.requires_grad = finetune
+            param.requires_grad = False
 
     def forward(self, sentences: torch.Tensor):
-        embedded_sentences = torch.sum(self.bert(sentences)[0], dim=1)
-        embedded_sentences = self.fc(embedded_sentences)
+        # TODO: Check about masking the padding
+        # https://arxiv.org/abs/1801.06146
+        hidden_states = self.bert(sentences)
+        max_pooled = torch.max(hidden_states[0], dim=1)[0]
+        mean_pooled = torch.mean(hidden_states[0], dim=1)
+        # TODO: Check again about the CLS hidden state
+        last_state = hidden_states[0][:, 0, :]
+        embedded_sentences = torch.cat([last_state, max_pooled, mean_pooled], dim=1)
 
-        return self.l2_normalize(embedded_sentences)
+        return embedded_sentences
+
+
+class Projector(nn.Module):
+    def __init__(self, input_space, joint_space: int):
+        super(Projector, self).__init__()
+        self.fc1 = nn.Linear(input_space, joint_space)
+        self.bn = nn.BatchNorm1d(joint_space)
+        self.fc2 = nn.Linear(joint_space, joint_space)
+        self.l2_normalize = L2Normalize()
+
+    def forward(self, embeddings: torch.Tensor):
+        projected_embeddings = self.fc2(
+            self.bn(F.relu(self.fc1(embeddings)))
+        )
+
+        return self.l2_normalize(projected_embeddings)
 
 
 class ImageTextMatchingModel(nn.Module):
@@ -62,25 +81,49 @@ class ImageTextMatchingModel(nn.Module):
         super(ImageTextMatchingModel, self).__init__()
         self.finetune_image_encoder = finetune_image_encoder
         self.finetune_sentence_encoder = finetune_sentence_encoder
-        self.image_encoder = ImageEncoder(joint_space, finetune_image_encoder)
+        self.unfreezed_image = False
+        self.unfreezed_sentence = False
+        # Image encoder
+        self.image_encoder = ImageEncoder()
         self.image_encoder.eval()
-        self.sentence_encoder = SentenceEncoder(joint_space, finetune_sentence_encoder)
+        self.image_projector = Projector(2048, joint_space)
+        # Sentence encoder
+        self.sentence_encoder = SentenceEncoder()
         self.sentence_encoder.eval()
+        self.sentence_projector = Projector(768 * 3, joint_space)
 
     def forward(self, images: torch.Tensor, sentences: torch.Tensor):
         embedded_images = self.image_encoder(images)
         embedded_sentences = self.sentence_encoder(sentences)
 
-        return embedded_images, embedded_sentences
+        return (
+            self.image_projector(embedded_images),
+            self.sentence_projector(embedded_sentences),
+        )
 
     def train(self, mode: bool = True):
-        if self.finetune_image_encoder and mode:
+        if self.finetune_image_encoder and mode and self.unfreezed_image:
             self.image_encoder.train()
-        if self.finetune_sentence_encoder and mode:
+        if self.finetune_sentence_encoder and mode and self.unfreezed_sentence:
             self.sentence_encoder.train()
-        if not mode:
-            self.image_encoder.train(mode)
-            self.sentence_encoder.train(mode)
+        if mode:
+            self.image_projector.train(True)
+            self.sentence_projector.train(True)
+        else:
+            self.image_encoder.train(False)
+            self.sentence_encoder.train(False)
+            self.image_projector.train(False)
+            self.sentence_projector.train(False)
+
+    def unfreeze_image_encoder(self):
+        self.unfreezed_image = True
+        for param in self.image_encoder.parameters():
+            param.requires_grad = True
+
+    def unfreeze_sentence_encoder(self):
+        self.unfreezed_sentence = True
+        for param in self.sentence_encoder.parameters():
+            param.requires_grad = True
 
 
 class TripletLoss(nn.Module):
