@@ -46,7 +46,7 @@ class SentenceEncoder(nn.Module):
             param.requires_grad = finetune
 
     def forward(self, sentences: torch.Tensor):
-        embedded_sentences = torch.mean(self.bert(sentences)[0], dim=1)
+        embedded_sentences = torch.sum(self.bert(sentences)[0], dim=1)
         embedded_sentences = self.fc(embedded_sentences)
 
         return self.l2_normalize(embedded_sentences)
@@ -75,13 +75,10 @@ class ImageTextMatchingModel(nn.Module):
 
     def train(self, mode: bool = True):
         if self.finetune_image_encoder and mode:
-            print("image_encoder_in_train")
             self.image_encoder.train()
         if self.finetune_sentence_encoder and mode:
-            print("sentence_encoder_in_train")
             self.sentence_encoder.train()
         if not mode:
-            print("both in eval")
             self.image_encoder.train(mode)
             self.sentence_encoder.train(mode)
 

@@ -26,9 +26,8 @@ class FlickrDataset:
                 ),
             ]
         )
-        self.tokenizer = BertTokenizer.from_pretrained(
-            "bert-base-uncased", add_special_tokens=True
-        )
+        print("adding special tokens")
+        self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
     @staticmethod
     def parse_captions_filenames(texts_path: str) -> Dict[str, List[str]]:
@@ -113,7 +112,9 @@ class FlickrDatasetTrain(FlickrDataset, TorchDataset):
         image_train_transformed = self.train_transform(image)
         image_all_transformed = self.all_transform(image_train_transformed)
 
-        caption = torch.tensor(self.tokenizer.encode(self.captions[idx]))
+        caption = torch.tensor(
+            self.tokenizer.encode(self.captions[idx], add_special_tokens=True)
+        )
 
         return image_all_transformed, caption
 
@@ -138,7 +139,9 @@ class FlickrDatasetVal(FlickrDataset, TorchDataset):
         image_val_transformed = self.val_transform(image)
         image_all_transformed = self.all_transform(image_val_transformed)
 
-        caption = torch.tensor(self.tokenizer.encode(self.captions[idx]))
+        caption = torch.tensor(
+            self.tokenizer.encode(self.captions[idx], add_special_tokens=True)
+        )
 
         return image_all_transformed, caption
 

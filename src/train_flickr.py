@@ -27,6 +27,7 @@ def train(
     batch_size: int,
     save_model_path: str,
     learning_rate: float,
+    clip_val: float,
     joint_space: int,
     margin: float,
     batch_hard: bool,
@@ -77,6 +78,8 @@ def train(
             loss = criterion(embedded_images, embedded_sentences)
             # backward
             loss.backward()
+            # clip the gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
             # update weights
             optimizer.step()
 
@@ -119,6 +122,7 @@ def main():
         args.batch_size,
         args.save_model_path,
         args.learning_rate,
+        args.clip_val,
         args.joint_space,
         args.margin,
         args.batch_hard,
@@ -187,14 +191,13 @@ def parse_args():
         "--margin", type=float, default=0.2, help="The contrastive margin."
     )
     parser.add_argument(
-        "--gradient_clip_val", type=float, default=2.0, help="The clipping threshold."
+        "--clip_val", type=float, default=2.0, help="The clipping threshold."
     )
     parser.add_argument(
         "--batch_hard",
         action="store_true",
         help="Whether to train on the harderst negatives in a batch.",
     )
-
     parser.add_argument(
         "--finetune_image_encoder",
         action="store_true",
