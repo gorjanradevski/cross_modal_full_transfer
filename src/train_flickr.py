@@ -200,9 +200,9 @@ def parse_args():
         help="Whether to finetune the image encoder.",
     )
     parser.add_argument(
-        "--finetune_image_encoder",
+        "--finetune_sentence_encoder",
         action="store_true",
-        help="Whether to finetune the image encoder.",
+        help="Whether to finetune the sentence encoder.",
     )
 
     return parser.parse_args()
