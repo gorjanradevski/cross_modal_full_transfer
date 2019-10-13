@@ -31,10 +31,10 @@ def train(
     margin: float,
     batch_hard: bool,
     finetune_image_encoder: bool,
+    finetune_sentence_encoder: bool,
 ):
     # Check for CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     dataset_train = FlickrDatasetTrain(
         images_path, sentences_path, train_imgs_file_path
     )
@@ -44,14 +44,20 @@ def train(
         shuffle=True,
         num_workers=4,
         collate_fn=collate_pad_batch,
-        pin_memory=True
+        pin_memory=True,
     )
     dataset_val = FlickrDatasetVal(images_path, sentences_path, val_imgs_file_path)
     val_loader = DataLoader(
-        dataset_val, batch_size=batch_size, num_workers=4, collate_fn=collate_pad_batch, pin_memory=True
+        dataset_val,
+        batch_size=batch_size,
+        num_workers=4,
+        collate_fn=collate_pad_batch,
+        pin_memory=True,
     )
     model = nn.DataParallel(
-        ImageTextMatchingModel(joint_space, finetune_image_encoder)
+        ImageTextMatchingModel(
+            joint_space, finetune_image_encoder, finetune_sentence_encoder
+        )
     ).to(device)
     criterion = TripletLoss(margin, batch_hard)
     # noinspection PyUnresolvedReferences
@@ -59,6 +65,8 @@ def train(
     evaluator = Evaluator(len(dataset_val), joint_space)
 
     for epoch in range(epochs):
+        # Set model in train mode
+        model.train()
         print(f"Starting epoch {epoch+1}...")
         evaluator.reset_all_vars()
         for images, sentences in tqdm(train_loader):
@@ -72,6 +80,7 @@ def train(
             # update weights
             optimizer.step()
 
+        model.eval()
         with torch.no_grad():
             for images, sentences in tqdm(val_loader):
                 images, sentences = images.to(device), sentences.to(device)
@@ -113,6 +122,7 @@ def main():
         args.margin,
         args.batch_hard,
         args.finetune_image_encoder,
+        args.finetune_sentence_encoder,
     )
 
 
@@ -189,6 +199,12 @@ def parse_args():
         action="store_true",
         help="Whether to finetune the image encoder.",
     )
+    parser.add_argument(
+        "--finetune_image_encoder",
+        action="store_true",
+        help="Whether to finetune the image encoder.",
+    )
+
     return parser.parse_args()
 
 

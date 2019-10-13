@@ -39,11 +39,14 @@ class SentenceEncoder(nn.Module):
 
     # TODO: Option to freeze sentence encoder
 
-    def __init__(self, joint_space: int):
+    def __init__(self, joint_space: int, finetune: bool):
         super(SentenceEncoder, self).__init__()
         self.bert = BertModel.from_pretrained("bert-base-uncased")
         self.fc = nn.Linear(768, joint_space)
         self.l2_normalize = L2Normalize()
+
+        for param in self.bert.parameters():
+            param.requires_grad = finetune
 
     def forward(self, sentences: torch.Tensor):
         embedded_sentences = torch.mean(self.bert(sentences)[0], dim=1)
@@ -53,16 +56,35 @@ class SentenceEncoder(nn.Module):
 
 
 class ImageTextMatchingModel(nn.Module):
-    def __init__(self, joint_space: int, finetune_image_encoder: bool):
+    def __init__(
+        self,
+        joint_space: int,
+        finetune_image_encoder: bool,
+        finetune_sentence_encoder: bool,
+    ):
         super(ImageTextMatchingModel, self).__init__()
+        self.finetune_image_encoder = finetune_image_encoder
+        self.finetune_sentence_encoder = finetune_sentence_encoder
         self.image_encoder = ImageEncoder(joint_space, finetune_image_encoder)
-        self.sentence_encoder = SentenceEncoder(joint_space)
+        self.image_encoder.eval()
+        self.sentence_encoder = SentenceEncoder(joint_space, finetune_sentence_encoder)
+        self.sentence_encoder.eval()
 
     def forward(self, images: torch.Tensor, sentences: torch.Tensor):
         embedded_images = self.image_encoder(images)
         embedded_sentences = self.sentence_encoder(sentences)
 
         return embedded_images, embedded_sentences
+
+    def set_train(self):
+        if self.finetune_image_encoder:
+            self.image_encoder.train()
+        if self.finetune_sentence_encoder:
+            self.sentence_encoder.train()
+
+    def set_eval(self):
+        self.image_encoder.eval()
+        self.sentence_encoder.eval()
 
 
 class TripletLoss(nn.Module):
