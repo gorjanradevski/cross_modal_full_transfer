@@ -71,7 +71,7 @@ def train(
         evaluator.reset_all_vars()
 
         # Check whether you should fine-tune
-        if epoch > finetune_after:
+        if epoch + 1 > finetune_after:
             if finetune_image_encoder:
                 model.module.unfreeze_image_encoder()
             if finetune_sentence_encoder:
@@ -92,8 +92,9 @@ def train(
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
             # update weights
             optimizer.step()
-            # decay the learning rate
-            scheduler.step()
+
+        # decay the learning rate
+        scheduler.step()
 
         # Set model in evaluation mode
         model.train(False)
