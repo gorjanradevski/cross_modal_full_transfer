@@ -36,9 +36,6 @@ class ImageEncoder(nn.Module):
 
 
 class SentenceEncoder(nn.Module):
-
-    # TODO: Option to freeze sentence encoder
-
     def __init__(self, joint_space: int, finetune: bool):
         super(SentenceEncoder, self).__init__()
         self.bert = BertModel.from_pretrained("bert-base-uncased")
@@ -76,15 +73,17 @@ class ImageTextMatchingModel(nn.Module):
 
         return embedded_images, embedded_sentences
 
-    def set_train(self):
-        if self.finetune_image_encoder:
+    def train(self, mode: bool = True):
+        if self.finetune_image_encoder and mode:
+            print("image_encoder_in_train")
             self.image_encoder.train()
-        if self.finetune_sentence_encoder:
+        if self.finetune_sentence_encoder and mode:
+            print("sentence_encoder_in_train")
             self.sentence_encoder.train()
-
-    def set_eval(self):
-        self.image_encoder.eval()
-        self.sentence_encoder.eval()
+        if not mode:
+            print("both in eval")
+            self.image_encoder.train(mode)
+            self.sentence_encoder.train(mode)
 
 
 class TripletLoss(nn.Module):
