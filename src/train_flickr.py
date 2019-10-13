@@ -64,6 +64,7 @@ def train(
     criterion = TripletLoss(margin, batch_hard)
     # noinspection PyUnresolvedReferences
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, finetune_after, gamma=0.1)
     evaluator = Evaluator(len(dataset_val), joint_space)
     for epoch in range(epochs):
         # Check whether you should fine-tune
@@ -79,6 +80,7 @@ def train(
         evaluator.reset_all_vars()
         for images, sentences in tqdm(train_loader):
             images, sentences = images.to(device), sentences.to(device)
+            # scheduler.zero_grad()
             optimizer.zero_grad()
             # forward
             embedded_images, embedded_sentences = model(images, sentences)
@@ -88,6 +90,7 @@ def train(
             # clip the gradients
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
             # update weights
+            # scheduler.step()
             optimizer.step()
 
         # Set model in evaluation mode
@@ -113,6 +116,16 @@ def train(
             )
             print("=============================")
             torch.save(model.state_dict(), save_model_path)
+        else:
+            print("=============================")
+            print(
+                f"Metrics on epoch {epoch + 1}\n"
+                f"Current image-text recall at 1, 5, 10: "
+                f"{evaluator.cur_image2text_recall_at_k} \n"
+                f"Current text-image recall1 1, 5, 10:"
+                f"{evaluator.cur_text2image_recall_at_k}"
+            )
+            print("=============================")
 
 
 def main():
