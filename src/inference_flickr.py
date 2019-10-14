@@ -47,9 +47,9 @@ def inference(
     print("=============================")
     print(
         f"Image-text recall at 1, 5, 10: "
-        f"{evaluator.cur_image2text_recall_at_k} \n"
+        f"{evaluator.image2text_recall_at_k()} \n"
         f"Text-image recall at 1, 5, 10:"
-        f"{evaluator.cur_text2image_recall_at_k}"
+        f"{evaluator.text2image_recall_at_k()}"
     )
     print("=============================")
 
