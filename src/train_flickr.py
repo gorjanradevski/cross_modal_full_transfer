@@ -34,6 +34,7 @@ def train(
     finetune_image_encoder: bool,
     finetune_sentence_encoder: bool,
     finetune_after: int,
+    accumulation_steps: int,
 ):
     # Check for CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -79,19 +80,25 @@ def train(
 
         # Set model in train mode
         model.train(True)
-        for images, sentences in tqdm(train_loader):
+        # remove past gradients
+        optimizer.zero_grad()
+        for i, (images, sentences) in enumerate(tqdm(train_loader)):
+            # As per: https://gist.github.com/thomwolf/ac7a7da6b1888c2eeac8ac8b9b05d3d3
             images, sentences = images.to(device), sentences.to(device)
-            # scheduler.zero_grad()
-            optimizer.zero_grad()
             # forward
             embedded_images, embedded_sentences = model(images, sentences)
             loss = criterion(embedded_images, embedded_sentences)
+            # Normalize loss
+            loss = loss / accumulation_steps
             # backward
             loss.backward()
-            # clip the gradients
-            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
-            # update weights
-            optimizer.step()
+            # Wait for several backward steps
+            if (i + 1) % accumulation_steps == 0:
+                # clip the gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
+                # update weights
+                optimizer.step()
+                # Remove gradients
 
         # decay the learning rate
         scheduler.step()
@@ -151,6 +158,7 @@ def main():
         args.finetune_image_encoder,
         args.finetune_sentence_encoder,
         args.finetune_after,
+        args.accumulation_steps,
     )
 
 
@@ -233,6 +241,12 @@ def parse_args():
     )
     parser.add_argument(
         "--finetune_after", default=5, type=int, help="When to start finetuning."
+    )
+    parser.add_argument(
+        "--accumulation_steps",
+        default=5,
+        type=int,
+        help="For how many steps to accumulate gradients.",
     )
 
     return parser.parse_args()
