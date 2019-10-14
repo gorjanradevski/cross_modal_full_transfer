@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
 
-from utils.datasets import FlickrDatasetTrain, FlickrDatasetVal
+from utils.datasets import FlickrDatasetTrain, FlickrDatasetValTest
 from utils.evaluator import Evaluator
 from utils.data_loading_utils import collate_pad_batch
 from models import ImageTextMatchingModel, TripletLoss
@@ -42,7 +42,7 @@ def train(
         collate_fn=collate_pad_batch,
         pin_memory=True,
     )
-    dataset_val = FlickrDatasetVal(images_path, sentences_path, val_imgs_file_path)
+    dataset_val = FlickrDatasetValTest(images_path, sentences_path, val_imgs_file_path)
     val_loader = DataLoader(
         dataset_val,
         batch_size=batch_size,

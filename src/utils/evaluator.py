@@ -24,8 +24,8 @@ class Evaluator:
         self.index_update = 0
         self.embedded_images = np.zeros((self.num_samples, self.num_features))
         self.embedded_captions = np.zeros((self.num_samples, self.num_features))
-        self.cur_text2image_recall_at_k = -1.0
-        self.cur_image2text_recall_at_k = -1.0
+        self.cur_text2image_recall_at_k = (-1.0, -1.0, -1.0)
+        self.cur_image2text_recall_at_k = (-1.0, -1.0, -1.0)
 
     def update_embeddings(
         self, embedded_images: np.ndarray, embedded_captions: np.ndarray

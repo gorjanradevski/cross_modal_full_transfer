@@ -21,7 +21,9 @@ def inference(
 ):
     # Check for CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dataset_test = FlickrDatasetTest(images_path, sentences_path, test_imgs_file_path)
+    dataset_test = FlickrDatasetValTest(
+        images_path, sentences_path, test_imgs_file_path
+    )
     test_loader = DataLoader(
         dataset_test,
         batch_size=batch_size,
@@ -29,13 +31,16 @@ def inference(
         collate_fn=collate_pad_batch,
         pin_memory=True,
     )
+    # Create the model
     model = nn.DataParallel(ImageTextMatchingModel(joint_space)).to(device)
-    evaluator = Evaluator(len(dataset_test), joint_space)
-
-    # Set model in evaluation mode
+    # Load model
     model.load_state_dict(torch.load(load_model_path))
+    # Set model in evaluation mode
     model.train(False)
+    # Create evaluator
+    evaluator = Evaluator(len(dataset_test), joint_space)
     with torch.no_grad():
+        evaluator.reset_all_vars()
         for images, sentences in tqdm(test_loader):
             images, sentences = images.to(device), sentences.to(device)
             embedded_images, embedded_sentences = model(images, sentences)

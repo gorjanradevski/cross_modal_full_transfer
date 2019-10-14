@@ -119,7 +119,7 @@ class FlickrDatasetTrain(FlickrDataset, TorchDataset):
         return image_all_transformed, caption
 
 
-class FlickrDatasetVal(FlickrDataset, TorchDataset):
+class FlickrDatasetValTest(FlickrDataset, TorchDataset):
     def __init__(
         self, images_dir_path: str, texts_path: str, val_images_file_path: str
     ):
@@ -142,30 +142,5 @@ class FlickrDatasetVal(FlickrDataset, TorchDataset):
         caption = torch.tensor(
             self.tokenizer.encode(self.captions[idx], add_special_tokens=True)
         )
-
-        return image_all_transformed, caption
-
-
-class FlickrDatasetTest(FlickrDataset, TorchDataset):
-    def __init__(
-        self, images_dir_path: str, texts_path: str, test_images_file_path: str
-    ):
-        super().__init__(images_dir_path, texts_path)
-        self.image_paths, self.captions = self.get_data_wrapper(
-            test_images_file_path, self.img_path_caption, self.images_dir_path
-        )
-        self.test_transform = transforms.Compose(
-            [transforms.Resize(256), transforms.CenterCrop(224)]
-        )
-
-    def __len__(self):
-        return len(self.image_paths)
-
-    def __getitem__(self, idx: int):
-        image = Image.open(self.image_paths[idx])
-        image_test_transformed = self.test_transform(image)
-        image_all_transformed = self.all_transform(image_test_transformed)
-
-        caption = torch.tensor(self.tokenizer.encode(self.captions[idx]))
 
         return image_all_transformed, caption
