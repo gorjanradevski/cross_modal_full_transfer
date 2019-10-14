@@ -33,8 +33,8 @@ def inference(
     evaluator = Evaluator(len(dataset_test), joint_space)
 
     # Set model in evaluation mode
-    model.train(False)
     model.load_state_dict(torch.load(load_model_path))
+    model.train(False)
     with torch.no_grad():
         for images, sentences in tqdm(test_loader):
             images, sentences = images.to(device), sentences.to(device)
@@ -48,7 +48,7 @@ def inference(
     print(
         f"Image-text recall at 1, 5, 10: "
         f"{evaluator.image2text_recall_at_k()} \n"
-        f"Text-image recall at 1, 5, 10:"
+        f"Text-image recall at 1, 5, 10: "
         f"{evaluator.text2image_recall_at_k()}"
     )
     print("=============================")
