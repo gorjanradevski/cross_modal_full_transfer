@@ -7,15 +7,8 @@ from tqdm import tqdm
 
 from utils.datasets import FlickrDatasetTrain, FlickrDatasetVal
 from utils.evaluator import Evaluator
+from utils.data_loading_utils import collate_pad_batch
 from models import ImageTextMatchingModel, TripletLoss
-
-
-def collate_pad_batch(batch):
-    images, sentences = zip(*batch)
-    images = torch.stack(images, 0)
-    padded_sentences = torch.nn.utils.rnn.pad_sequence(sentences, batch_first=True)
-
-    return images, padded_sentences
 
 
 def train(
@@ -102,6 +95,7 @@ def train(
 
         # decay the learning rate
         scheduler.step()
+        print("Decaying learning rate...")
 
         # Set model in evaluation mode
         model.train(False)

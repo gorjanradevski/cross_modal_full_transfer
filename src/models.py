@@ -55,6 +55,11 @@ class SentenceEncoder(nn.Module):
         return embedded_sentences
 
 
+class SelfAttention(nn.Module):
+    # TODO: Project using self-attention instead of pooling
+    pass
+
+
 class Projector(nn.Module):
     def __init__(self, input_space, joint_space: int):
         super(Projector, self).__init__()
@@ -73,8 +78,8 @@ class ImageTextMatchingModel(nn.Module):
     def __init__(
         self,
         joint_space: int,
-        finetune_image_encoder: bool,
-        finetune_sentence_encoder: bool,
+        finetune_image_encoder: bool = False,
+        finetune_sentence_encoder: bool = False,
     ):
         super(ImageTextMatchingModel, self).__init__()
         self.finetune_image_encoder = finetune_image_encoder
