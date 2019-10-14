@@ -95,7 +95,6 @@ def train(
 
         # decay the learning rate
         scheduler.step()
-        print("Decaying learning rate...")
 
         # Set model in evaluation mode
         model.train(False)

@@ -26,7 +26,6 @@ class FlickrDataset:
                 ),
             ]
         )
-        print("adding special tokens")
         self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
     @staticmethod
