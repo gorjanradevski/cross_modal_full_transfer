@@ -58,7 +58,7 @@ def main():
     # Without the main sentinel, the code would be executed even if the script were
     # imported as a module.
     args = parse_args()
-    train(
+    inference(
         args.images_path,
         args.texts_path,
         args.test_imgs_file_path,
