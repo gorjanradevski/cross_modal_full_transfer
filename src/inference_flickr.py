@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from torch import nn
 from tqdm import tqdm
 
-from utils.datasets import FlickrDatasetTest
+from utils.datasets import FlickrDatasetValTest
 from utils.evaluator import Evaluator
 from utils.data_loading_utils import collate_pad_batch
 from models import ImageTextMatchingModel, TripletLoss
