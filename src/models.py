@@ -79,11 +79,11 @@ class ImageTextMatchingModel(nn.Module):
         super(ImageTextMatchingModel, self).__init__()
         self.finetune = finetune
         # Image encoder
-        self.image_encoder = ImageEncoder()
+        self.image_encoder = ImageEncoder(finetune)
         self.image_encoder.eval()
         self.image_projector = Projector(2048, joint_space)
         # Sentence encoder
-        self.sentence_encoder = SentenceEncoder()
+        self.sentence_encoder = SentenceEncoder(finetune)
         self.sentence_encoder.eval()
         self.sentence_projector = Projector(768 * 3, joint_space)
 
