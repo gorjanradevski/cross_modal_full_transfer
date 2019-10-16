@@ -18,6 +18,7 @@ def train(
     val_imgs_file_path: str,
     epochs: int,
     batch_size: int,
+    checkpoint_path: str,
     save_model_path: str,
     learning_rate: float,
     weight_decay: float,
@@ -51,6 +52,9 @@ def train(
     model = nn.DataParallel(ImageTextMatchingModel(joint_space, finetune=True)).to(
         device
     )
+    # Load model
+    model.load_state_dict(torch.load(checkpoint_path))
+    # Create loss
     criterion = TripletLoss(margin, batch_hard)
     # noinspection PyUnresolvedReferences
     optimizer = optim.Adam(
@@ -130,6 +134,7 @@ def main():
         args.val_imgs_file_path,
         args.epochs,
         args.batch_size,
+        args.checkpoint_path,
         args.save_model_path,
         args.learning_rate,
         args.weight_decay,
@@ -176,7 +181,13 @@ def parse_args():
     parser.add_argument(
         "--save_model_path",
         type=str,
-        default="models/tryout",
+        default="models/finetuned_flickr8k.pt",
+        help="Where to save the model.",
+    )
+    parser.add_argument(
+        "--checkpoint_path",
+        type=str,
+        default="models/pretrained_flickr8k.pt",
         help="Where to save the model.",
     )
     parser.add_argument(
