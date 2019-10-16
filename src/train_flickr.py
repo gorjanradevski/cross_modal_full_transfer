@@ -20,6 +20,7 @@ def train(
     batch_size: int,
     save_model_path: str,
     learning_rate: float,
+    weight_decay: float,
     clip_val: float,
     joint_space: int,
     margin: float,
@@ -57,7 +58,9 @@ def train(
     ).to(device)
     criterion = TripletLoss(margin, batch_hard)
     # noinspection PyUnresolvedReferences
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(
+        model.parameters(), lr=learning_rate, weight_decay=weight_decay
+    )
     scheduler = optim.lr_scheduler.StepLR(optimizer, finetune_after, gamma=0.1)
     evaluator = Evaluator(len(dataset_val), joint_space)
     for epoch in range(epochs):
@@ -92,6 +95,7 @@ def train(
                 # update weights
                 optimizer.step()
                 # Remove gradients
+                optimizer.zero_grad()
 
         # decay the learning rate
         scheduler.step()
@@ -144,6 +148,7 @@ def main():
         args.batch_size,
         args.save_model_path,
         args.learning_rate,
+        args.weight_decay,
         args.clip_val,
         args.joint_space,
         args.margin,
@@ -204,6 +209,9 @@ def parse_args():
     )
     parser.add_argument(
         "--learning_rate", type=float, default=0.0002, help="The learning rate."
+    )
+    parser.add_argument(
+        "--weight_decay", type=float, default=0.0, help="The weight decay."
     )
     parser.add_argument(
         "--joint_space",
