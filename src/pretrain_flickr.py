@@ -24,7 +24,6 @@ def train(
     clip_val: float,
     joint_space: int,
     margin: float,
-    batch_hard: bool,
 ):
     # Check for CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -50,7 +49,7 @@ def train(
     model = nn.DataParallel(ImageTextMatchingModel(joint_space, finetune=False)).to(
         device
     )
-    criterion = TripletLoss(margin, batch_hard)
+    criterion = TripletLoss(margin)
     # noinspection PyUnresolvedReferences
     optimizer = optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay
@@ -64,19 +63,23 @@ def train(
         model.train(True)
         # remove past gradients
         optimizer.zero_grad()
-        for i, (images, sentences) in enumerate(tqdm(train_loader)):
-            images, sentences = images.to(device), sentences.to(device)
-            # forward
-            embedded_images, embedded_sentences = model(images, sentences)
-            loss = criterion(embedded_images, embedded_sentences)
-            # backward
-            loss.backward()
-            # clip the gradients
-            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
-            # update weights
-            optimizer.step()
-            # Remove gradients
-            optimizer.zero_grad()
+        with tqdm(total=len(train_loader)) as pbar:
+            for images, sentences in train_loader:
+                images, sentences = images.to(device), sentences.to(device)
+                # forward
+                embedded_images, embedded_sentences = model(images, sentences)
+                loss = criterion(embedded_images, embedded_sentences)
+                # backward
+                loss.backward()
+                # clip the gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), clip_val)
+                # update weights
+                optimizer.step()
+                # Remove gradients
+                optimizer.zero_grad()
+                # Update progress bar
+                pbar.update(len(sentences))
+                pbar.set_postfix({"Batch loss": loss.item()})
 
         # Set model in evaluation mode
         model.train(False)
@@ -130,7 +133,6 @@ def main():
         args.clip_val,
         args.joint_space,
         args.margin,
-        args.batch_hard,
     )
 
 
@@ -198,11 +200,6 @@ def parse_args():
     )
     parser.add_argument(
         "--clip_val", type=float, default=2.0, help="The clipping threshold."
-    )
-    parser.add_argument(
-        "--batch_hard",
-        action="store_true",
-        help="Whether to train on the harderst negatives in a batch.",
     )
 
     return parser.parse_args()

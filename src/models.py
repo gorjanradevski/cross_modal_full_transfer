@@ -115,10 +115,9 @@ class ImageTextMatchingModel(nn.Module):
 class TripletLoss(nn.Module):
     # As per https://github.com/fartashf/vsepp/blob/master/model.py
 
-    def __init__(self, margin: float = 0, batch_hard: bool = False):
+    def __init__(self, margin: float):
         super(TripletLoss, self).__init__()
         self.margin = margin
-        self.batch_hard = batch_hard
 
     def forward(self, im, s):
         # compute image-sentence score matrix
@@ -143,8 +142,7 @@ class TripletLoss(nn.Module):
         cost_im = cost_im.masked_fill_(identity, 0)
 
         # keep the maximum violating negative for each query
-        if self.batch_hard:
-            cost_s = cost_s.max(1)[0]
-            cost_im = cost_im.max(0)[0]
+        cost_s = cost_s.max(1)[0]
+        cost_im = cost_im.max(0)[0]
 
         return cost_s.sum() + cost_im.sum()
