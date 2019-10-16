@@ -18,14 +18,14 @@ class L2Normalize(nn.Module):
 
 
 class ImageEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, finetune: bool):
         super(ImageEncoder, self).__init__()
         self.resnet = torch.nn.Sequential(
             *(list(resnet152(pretrained=True).children())[:-1])
         )
 
         for param in self.resnet.parameters():
-            param.requires_grad = False
+            param.requires_grad = finetune
 
     def forward(self, images: torch.Tensor):
         embedded_images = torch.flatten(self.resnet(images), start_dim=1)
@@ -34,13 +34,13 @@ class ImageEncoder(nn.Module):
 
 
 class SentenceEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, finetune: bool):
         super(SentenceEncoder, self).__init__()
         self.bert = BertModel.from_pretrained("bert-base-uncased")
         #  https://arxiv.org/abs/1801.06146
 
         for param in self.bert.parameters():
-            param.requires_grad = False
+            param.requires_grad = finetune
 
     def forward(self, sentences: torch.Tensor):
         # TODO: Check about masking the padding
@@ -75,17 +75,9 @@ class Projector(nn.Module):
 
 
 class ImageTextMatchingModel(nn.Module):
-    def __init__(
-        self,
-        joint_space: int,
-        finetune_image_encoder: bool = False,
-        finetune_sentence_encoder: bool = False,
-    ):
+    def __init__(self, joint_space: int, finetune: bool = False):
         super(ImageTextMatchingModel, self).__init__()
-        self.finetune_image_encoder = finetune_image_encoder
-        self.finetune_sentence_encoder = finetune_sentence_encoder
-        self.unfreezed_image = False
-        self.unfreezed_sentence = False
+        self.finetune = finetune
         # Image encoder
         self.image_encoder = ImageEncoder()
         self.image_encoder.eval()
@@ -105,11 +97,12 @@ class ImageTextMatchingModel(nn.Module):
         )
 
     def train(self, mode: bool = True):
-        if self.finetune_image_encoder and mode and self.unfreezed_image:
+        if self.finetune and mode:
             self.image_encoder.train()
-        if self.finetune_sentence_encoder and mode and self.unfreezed_sentence:
             self.sentence_encoder.train()
-        if mode:
+            self.image_projector.train(True)
+            self.sentence_projector.train(True)
+        elif mode:
             self.image_projector.train(True)
             self.sentence_projector.train(True)
         else:
@@ -117,16 +110,6 @@ class ImageTextMatchingModel(nn.Module):
             self.sentence_encoder.train(False)
             self.image_projector.train(False)
             self.sentence_projector.train(False)
-
-    def unfreeze_image_encoder(self):
-        self.unfreezed_image = True
-        for param in self.image_encoder.parameters():
-            param.requires_grad = True
-
-    def unfreeze_sentence_encoder(self):
-        self.unfreezed_sentence = True
-        for param in self.sentence_encoder.parameters():
-            param.requires_grad = True
 
 
 class TripletLoss(nn.Module):
