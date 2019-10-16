@@ -78,7 +78,7 @@ def train(
                 # Remove gradients
                 optimizer.zero_grad()
                 # Update progress bar
-                pbar.update(len(sentences))
+                pbar.update(1)
                 pbar.set_postfix({"Batch loss": loss.item()})
 
         # Set model in evaluation mode
