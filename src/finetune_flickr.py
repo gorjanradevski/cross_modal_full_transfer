@@ -69,14 +69,13 @@ def train(
         # remove past gradients
         optimizer.zero_grad()
         with tqdm(total=len(train_loader)) as pbar:
-            for images, sentences in train_loader:
+            for i, (images, sentences) in enumerate(train_loader):
                 # As per: https://gist.github.com/thomwolf/ac7a7da6b1888c2eeac8ac8b9b05d3d3
                 images, sentences = images.to(device), sentences.to(device)
                 # forward
                 embedded_images, embedded_sentences = model(images, sentences)
+                # Nor averaging over batch, hence not normalizing loss
                 loss = criterion(embedded_images, embedded_sentences)
-                # Normalize loss
-                loss = loss / accumulation_steps
                 # backward
                 loss.backward()
                 # Wait for several backward steps
