@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
-from torchvision.models import resnet152
+from efficientnet_pytorch import EfficientNet
 from transformers import BertModel
 import torch.nn.functional as F
 
@@ -20,15 +20,15 @@ class L2Normalize(nn.Module):
 class ImageEncoder(nn.Module):
     def __init__(self, finetune: bool):
         super(ImageEncoder, self).__init__()
-        self.resnet = torch.nn.Sequential(
-            *(list(resnet152(pretrained=True).children())[:-1])
-        )
+        self.efficientnet = EfficientNet.from_pretrained("efficientnet-b7")
 
-        for param in self.resnet.parameters():
+        for param in self.efficientnet.parameters():
             param.requires_grad = finetune
 
     def forward(self, images: torch.Tensor):
-        embedded_images = torch.flatten(self.resnet(images), start_dim=1)
+        embedded_images = torch.flatten(
+            self.efficientnet.extract_features(images), start_dim=1
+        )
 
         return embedded_images
 
