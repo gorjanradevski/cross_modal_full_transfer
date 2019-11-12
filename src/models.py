@@ -20,7 +20,7 @@ class L2Normalize(nn.Module):
 class ImageEncoder(nn.Module):
     def __init__(self, finetune: bool):
         super(ImageEncoder, self).__init__()
-        self.efficientnet = EfficientNet.from_pretrained("efficientnet-b7")
+        self.efficientnet = EfficientNet.from_pretrained("efficientnet-b5")
 
         for param in self.efficientnet.parameters():
             param.requires_grad = finetune
@@ -76,7 +76,7 @@ class ImageTextMatchingModel(nn.Module):
         # Image encoder
         self.image_encoder = ImageEncoder(finetune)
         self.image_encoder.eval()
-        self.image_projector = Projector(2048, joint_space)
+        self.image_projector = Projector(1280 * 7 * 7, joint_space)
         # Sentence encoder
         self.sentence_encoder = SentenceEncoder(finetune)
         self.sentence_encoder.eval()
