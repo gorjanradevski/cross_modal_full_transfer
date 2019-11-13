@@ -21,14 +21,15 @@ class ImageEncoder(nn.Module):
     def __init__(self, finetune: bool):
         super(ImageEncoder, self).__init__()
         self.efficientnet = EfficientNet.from_pretrained("efficientnet-b5")
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
         for param in self.efficientnet.parameters():
             param.requires_grad = finetune
 
     def forward(self, images: torch.Tensor):
-        embedded_images = torch.flatten(
-            self.efficientnet.extract_features(images), start_dim=1
-        )
+        features = self.efficientnet.extract_features(images)
+        pooled_features = self.avg_pool(features)
+        embedded_images = torch.flatten(pooled_features, start_dim=1)
 
         return embedded_images
 
@@ -76,7 +77,7 @@ class ImageTextMatchingModel(nn.Module):
         # Image encoder
         self.image_encoder = ImageEncoder(finetune)
         self.image_encoder.eval()
-        self.image_projector = Projector(2048 * 7 * 7, joint_space)
+        self.image_projector = Projector(2048, joint_space)
         # Sentence encoder
         self.sentence_encoder = SentenceEncoder(finetune)
         self.sentence_encoder.eval()
