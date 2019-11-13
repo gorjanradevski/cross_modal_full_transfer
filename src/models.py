@@ -76,7 +76,7 @@ class ImageTextMatchingModel(nn.Module):
         # Image encoder
         self.image_encoder = ImageEncoder(finetune)
         self.image_encoder.eval()
-        self.image_projector = Projector(1280 * 7 * 7, joint_space)
+        self.image_projector = Projector(2048 * 7 * 7, joint_space)
         # Sentence encoder
         self.sentence_encoder = SentenceEncoder(finetune)
         self.sentence_encoder.eval()
