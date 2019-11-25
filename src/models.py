@@ -108,7 +108,7 @@ class ImageTextMatchingModel(nn.Module):
             self.sentence_projector.train(False)
 
 
-class TripletLoss(nn.Module):
+class BatchHard(nn.Module):
     def __init__(self, margin: float, device: str):
         """Build the batch-hard triplet loss over a batch of embeddings.
 
@@ -116,7 +116,7 @@ class TripletLoss(nn.Module):
             margin: margin for triplet loss.
             device: on which device to compute the loss.
         """
-        super(TripletLoss, self).__init__()
+        super(BatchHard, self).__init__()
         self.margin = margin
         self.device = device
 
@@ -168,9 +168,8 @@ class TripletLoss(nn.Module):
         # Combine biggest d(a, p) and smallest d(a, n) into final triplet loss
         tl = self.margin + hardest_negative_dist - hardest_positive_dist
         tl[tl < 0] = 0
-        triplet_loss = tl.mean()
 
-        return triplet_loss
+        return tl.sum()
 
 
 class BatchAll(nn.Module):

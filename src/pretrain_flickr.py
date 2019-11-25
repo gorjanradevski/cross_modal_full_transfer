@@ -8,7 +8,7 @@ from tqdm import tqdm
 from utils.datasets import FlickrDatasetTrain, FlickrDatasetValTest
 from utils.evaluator import Evaluator
 from utils.data_loading_utils import collate_pad_batch
-from models import ImageTextMatchingModel, BatchAll
+from models import ImageTextMatchingModel, BatchHard
 
 
 def train(
@@ -49,7 +49,7 @@ def train(
     model = nn.DataParallel(ImageTextMatchingModel(joint_space, finetune=False)).to(
         device
     )
-    criterion = BatchAll(margin, device)
+    criterion = BatchHard(margin, device)
     # noinspection PyUnresolvedReferences
     optimizer = optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay
