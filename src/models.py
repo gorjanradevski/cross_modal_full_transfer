@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from efficientnet_pytorch import EfficientNet
+from torchvision.models import resnet152
 from transformers import BertModel
 import torch.nn.functional as F
 
@@ -19,16 +19,17 @@ class L2Normalize(nn.Module):
 class ImageEncoder(nn.Module):
     def __init__(self, finetune: bool):
         super(ImageEncoder, self).__init__()
-        self.efficientnet = EfficientNet.from_pretrained("efficientnet-b5")
+        self.resnet = torch.nn.Sequential(
+            *(list(resnet152(pretrained=True).children())[:-1])
+        )
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
-        for param in self.efficientnet.parameters():
+        for param in self.resnet.parameters():
             param.requires_grad = finetune
 
     def forward(self, images: torch.Tensor):
-        features = self.efficientnet.extract_features(images)
-        pooled_features = self.avg_pool(features)
-        embedded_images = torch.flatten(pooled_features, start_dim=1)
+        features = self.resnet(images)
+        embedded_images = torch.flatten(features, start_dim=1)
 
         return embedded_images
 
@@ -140,7 +141,7 @@ class TripletLoss(nn.Module):
         # For each anchor, get the hardest positive
         # First, we need to get a mask for every valid positive (they should have same
         # label)
-        mask_anchor_positive = labels.unsqueeze(0) == labels.unsqueeze(1)
+        mask_anchor_positive = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
 
         # We put to 0 any element where (a, p) is not valid (valid if a != p and
         # label(a) == label(p))
