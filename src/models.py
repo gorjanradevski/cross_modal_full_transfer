@@ -155,7 +155,7 @@ class TripletLoss(nn.Module):
         # For each anchor, get the hardest negative
         # First, we need to get a mask for every valid negative (they should have
         # different labels)
-        mask_anchor_negative = ~(labels.unsqueeze(0) == labels.unsqueeze(1)).float()
+        mask_anchor_negative = ~((labels.unsqueeze(0) == labels.unsqueeze(1))).float()
 
         # We add the maximum value in each row to the invalid negatives
         # (label(a) == label(n))
@@ -187,7 +187,9 @@ class BatchAll(nn.Module):
         self.margin = margin
         self.device = device
 
-    def forward(self, labels: torch.Tensor, embeddings: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, labels: torch.Tensor, image_embeddings: torch.Tensor, sentence_embeddings
+    ) -> torch.Tensor:
         """Computes the triplet loss using batch-hard mining.
 
         Arguments:
@@ -199,7 +201,7 @@ class BatchAll(nn.Module):
 
         """
         # Get the distance matrix
-        pairwise_dist = torch.matmul(embeddings, embeddings.t())
+        pairwise_dist = torch.matmul(image_embeddings, sentence_embeddings.t())
 
         anchor_positive_dist = pairwise_dist.unsqueeze(2)
         anchor_negative_dist = pairwise_dist.unsqueeze(1)
