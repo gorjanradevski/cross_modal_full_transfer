@@ -118,7 +118,7 @@ class TripletLoss(nn.Module):
             margin: margin for triplet loss.
             device: on which device to compute the loss.
         """
-        super(TripletLoss).__init__()
+        super(TripletLoss, self).__init__()
         self.margin = margin
         self.device = device
 
@@ -183,7 +183,7 @@ class BatchAll(nn.Module):
             margin: margin for triplet loss
             device: on which device to compute the loss.
         """
-        super(BatchAll).__init__()
+        super(BatchAll, self).__init__()
         self.margin = margin
         self.device = device
 
