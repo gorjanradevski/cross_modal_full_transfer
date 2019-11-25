@@ -143,21 +143,20 @@ class BatchHard(nn.Module):
         # label)
         mask_anchor_positive = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
 
-        # We put to 0 any element where (a, p) is not valid (valid if a != p and
-        # label(a) == label(p))
+        # We put to 0 any element where (a, p) is not valid (valid if label(a) == label(p))
         anchor_positive_dist = mask_anchor_positive * pairwise_dist
 
         # shape (batch_size, 1)
-        hardest_positive_dist, _ = anchor_positive_dist.max(1, keepdim=True)
+        hardest_positive_dist, _ = anchor_positive_dist.min(1, keepdim=True)
 
         # For each anchor, get the hardest negative
         # First, we need to get a mask for every valid negative (they should have
         # different labels)
         mask_anchor_negative = (~(labels.unsqueeze(0) == labels.unsqueeze(1))).float()
 
-        # We add the maximum value in each row to the invalid negatives
+        # We add the minimum value in each row to the invalid negatives
         # (label(a) == label(n))
-        max_anchor_negative_dist, _ = pairwise_dist.max(1, keepdim=True)
+        max_anchor_negative_dist, _ = pairwise_dist.min(1, keepdim=True)
         anchor_negative_dist = pairwise_dist + max_anchor_negative_dist * (
             1.0 - mask_anchor_negative
         )
@@ -165,17 +164,15 @@ class BatchHard(nn.Module):
         # shape (batch_size,)
         hardest_negative_dist, _ = anchor_negative_dist.min(1, keepdim=True)
 
-        # Combine biggest d(a, p) and smallest d(a, n) into final triplet loss
-        tl = self.margin + hardest_negative_dist - hardest_positive_dist
-        tl[tl < 0] = 0
+        # Combine smallest s(a, p) and biggest s(a, n) into final triplet loss
+        triplet_loss = self.margin + hardest_negative_dist - hardest_positive_dist
 
-        return tl.sum()
+        return triplet_loss.clamp(min=0).sum()
 
 
 class BatchAll(nn.Module):
     def __init__(self, margin: float, device: str):
         """Build the batch-all triplet loss over a batch of embeddings.
-
         Arguments:
             margin: margin for triplet loss
             device: on which device to compute the loss.
@@ -188,14 +185,11 @@ class BatchAll(nn.Module):
         self, labels: torch.Tensor, image_embeddings: torch.Tensor, sentence_embeddings
     ) -> torch.Tensor:
         """Computes the triplet loss using batch-hard mining.
-
         Arguments:
             labels: The labels for each of the embeddings.
             embeddings: The embeddings.
-
         Returns:
             Scalar loss containing the triplet loss.
-
         """
         # Get the distance matrix
         pairwise_dist = torch.matmul(image_embeddings, sentence_embeddings.t())
@@ -212,20 +206,11 @@ class BatchAll(nn.Module):
 
         # Put to zero the invalid triplets
         # (where label(a) != label(p) or label(n) == label(a) or a == p)
-        mask = _get_triplet_mask(labels)
-        triplet_loss = mask.float() * triplet_loss
+        mask = _get_triplet_mask(labels).float()
+        triplet_loss = mask * triplet_loss
 
-        # Remove negative losses (i.e. the easy triplets)
-        triplet_loss[triplet_loss < 0] = 0
-
-        # Count number of positive triplets (where triplet_loss > 0)
-        valid_triplets = triplet_loss[triplet_loss > 1e-16]
-        num_positive_triplets = valid_triplets.size(0)
-
-        # Get final mean triplet loss over the positive valid triplets
-        triplet_loss = triplet_loss.sum() / (num_positive_triplets + 1e-16)
-
-        return triplet_loss
+        # Remove negative losses (i.e. the easy triplets) and sum
+        return triplet_loss.clamp(min=0).sum()
 
 
 def _get_triplet_mask(labels: torch.Tensor) -> torch.Tensor:
