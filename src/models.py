@@ -166,7 +166,7 @@ class TripletLoss(nn.Module):
         hardest_negative_dist, _ = anchor_negative_dist.min(1, keepdim=True)
 
         # Combine biggest d(a, p) and smallest d(a, n) into final triplet loss
-        tl = hardest_positive_dist - hardest_negative_dist + self.margin
+        tl = self.margin + hardest_negative_dist - hardest_positive_dist
         tl[tl < 0] = 0
         triplet_loss = tl.mean()
 
@@ -209,7 +209,7 @@ class BatchAll(nn.Module):
         # negative=k
         # Uses broadcasting where the 1st argument has shape (batch_size, batch_size, 1)
         # and the 2nd (batch_size, 1, batch_size)
-        triplet_loss = anchor_positive_dist - anchor_negative_dist + self.margin
+        triplet_loss = self.margin + anchor_negative_dist - anchor_positive_dist
 
         # Put to zero the invalid triplets
         # (where label(a) != label(p) or label(n) == label(a) or a == p)
