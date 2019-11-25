@@ -107,9 +107,6 @@ class ImageTextMatchingModel(nn.Module):
             self.sentence_projector.train(False)
 
 
-# Adapted from: https://github.com/omoindrot/tensorflow-triplet-loss
-
-
 class TripletLoss(nn.Module):
     def __init__(self, margin: float, device: str):
         """Build the batch-hard triplet loss over a batch of embeddings.
@@ -155,7 +152,7 @@ class TripletLoss(nn.Module):
         # For each anchor, get the hardest negative
         # First, we need to get a mask for every valid negative (they should have
         # different labels)
-        mask_anchor_negative = ~((labels.unsqueeze(0) == labels.unsqueeze(1))).float()
+        mask_anchor_negative = (~(labels.unsqueeze(0) == labels.unsqueeze(1))).float()
 
         # We add the maximum value in each row to the invalid negatives
         # (label(a) == label(n))
