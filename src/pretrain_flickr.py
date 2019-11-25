@@ -49,7 +49,7 @@ def train(
     model = nn.DataParallel(ImageTextMatchingModel(joint_space, finetune=False)).to(
         device
     )
-    criterion = TripletLoss(margin)
+    criterion = TripletLoss(margin, device)
     # noinspection PyUnresolvedReferences
     optimizer = optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay
@@ -68,7 +68,9 @@ def train(
                 images, sentences = images.to(device), sentences.to(device)
                 # forward
                 embedded_images, embedded_sentences = model(images, sentences)
-                loss = criterion(embedded_images, embedded_sentences)
+                loss = criterion(
+                    torch.arange(batch_size), torch.embedded_images, embedded_sentences
+                )
                 # backward
                 loss.backward()
                 # clip the gradients
