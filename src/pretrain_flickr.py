@@ -69,7 +69,7 @@ def train(
                 # forward
                 embedded_images, embedded_sentences = model(images, sentences)
                 loss = criterion(
-                    torch.arange(batch_size), torch.embedded_images, embedded_sentences
+                    torch.arange(batch_size), embedded_images, embedded_sentences
                 )
                 # backward
                 loss.backward()
